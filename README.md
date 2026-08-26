@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wordle
+
+A Wordle clone built with Next.js that plays against the public
+[Votee Wordle API](https://wordle.votee.dev:8000/redoc). You get six tries to
+guess a hidden word; every guess is scored letter by letter by the API and
+revealed on the board.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). The root route redirects to
+`/wordle`, where the game lives.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How to Play
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Type a guess of the configured length and press **Enter** or **Submit**. Each
+tile is colored with the result the API returns:
 
-## Learn More
+| Color  | Result    | Meaning                                       |
+| ------ | --------- | --------------------------------------------- |
+| Green  | `correct` | Right letter in the right slot                |
+| Yellow | `present` | Right letter in the wrong slot                |
+| Grey   | `absent`  | Letter is not in the word                     |
 
-To learn more about Next.js, take a look at the following resources:
+You have six attempts. Changing the mode, the seed, or the custom word starts a
+fresh board, as does the **New game** button.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Modes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Daily** — everyone guesses the same word for the current day (`GET /daily`).
+- **Random** — a random word chosen from a numeric seed (`GET /random`), so the
+  same seed always yields the same word.
+- **Custom** — you supply the word to be guessed (`GET /word/{word}`), useful for
+  testing or for handing a puzzle to someone else.
 
-## Deploy on Vercel
+Word length is configurable from 3 to 10 letters and defaults to 5. The board
+tiles shrink to keep even a ten-letter game on screen without scrolling.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Command      | Description                          |
+| ------------ | ------------------------------------ |
+| `pnpm dev`   | Start the development server         |
+| `pnpm build` | Create a production build            |
+| `pnpm start` | Serve the production build           |
+| `pnpm lint`  | Run ESLint                           |
+| `pnpm test`  | Run the Vitest unit tests            |
+
+## Project Structure
+
+```
+app/
+  layout.tsx              Root layout, Ant Design registry and theme provider
+  theme.ts                Dark purple palette and Ant Design theme tokens
+  globals.css             Tailwind entry point, tile animations, CSS variables
+  page.tsx                Redirects / to /wordle
+  wordle/
+    page.tsx              Game screen: mode, board and guess state
+    api.ts                Typed wrappers around the daily/random/custom endpoints
+    gameRules.ts          Word length limits, attempt limit, win/lose resolution
+    errorMessage.ts       Normalizes API errors into a displayable string
+    types.ts              Shared game types
+    components/
+      WordleGrid.tsx      The six-by-N tile board
+lib/
+  api.ts                  Shared axios instance pointing at the Wordle API
+```
+
+## Tech Stack
+
+- [Next.js 16](https://nextjs.org) (App Router) and React 19
+- [Ant Design 6](https://ant.design) for the form and feedback components
+- [Tailwind CSS 4](https://tailwindcss.com) for layout and the board styling
+- [axios](https://axios-http.com) for API calls
+- [Vitest](https://vitest.dev) for unit tests
+- TypeScript throughout
+
+## Testing
+
+Game logic is kept out of the React components so it can be tested directly.
+`gameRules.test.ts` covers word length validation and win/lose resolution, and
+`errorMessage.test.ts` covers turning the API's two error shapes — a plain string
+for its own 4xx checks and a FastAPI validation object for 422 — into a single
+message.
+
+```bash
+pnpm test
+```
+
+## Configuration
+
+The API base URL is set in `lib/api.ts` and currently points at
+`https://wordle.votee.dev:8000`. Change it there to run against a different
+backend.
